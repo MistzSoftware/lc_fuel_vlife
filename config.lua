@@ -53,6 +53,7 @@ Config.DefaultValues = {
         plus = 1.30,
         premium = 1.65,
         diesel = 1.45,
+        kerosene = 2.10,    -- mtz_gasstations: aircraft fuel (only sold where a station has it)
     },
     -- Set if the pump will have stock of each fuel type or not when not owned
     fuelStock = {
@@ -60,6 +61,7 @@ Config.DefaultValues = {
         plus = true,
         premium = true,
         diesel = true,
+        kerosene = false,   -- mtz_gasstations: pumps outside any station don't sell kerosene
     }
 }
 
@@ -244,6 +246,7 @@ Config.FuelConsumptionPerFuelType = {
     plus = 0.55,
     premium = 0.40,
     diesel = 0.48,
+    kerosene = 0.45,    -- mtz_gasstations
     electric = 0.75
 }
 
@@ -363,6 +366,7 @@ Config.CustomGasPumpLocations = {
     { prop = "prop_gas_pump_1b", location = vector4(-1125.15, -2866.97, 12.95, 240.0),  ropeLength = 14.0 },
     { prop = "prop_gas_pump_1b", location = vector4(1771.81, 3229.24, 41.51, 15.00),    ropeLength = 14.0 },
     { prop = "prop_gas_pump_1b", location = vector4(1748.31, 3297.08, 40.16, 15.0),     ropeLength = 14.0 },
+    { prop = "prop_gas_pump_1b", location = vector4(1587.59, 3162.40, 39.80, 45.29),    ropeLength = 14.0 }, -- mtz_gasstations: kerosene, Sandy Shores airfield
 }
 
 -- Vehicles that dont use fuel

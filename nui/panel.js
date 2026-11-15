@@ -85,7 +85,20 @@ window.addEventListener("message", async function(event) {
                 $("#gas-pump-container-image").attr("src", `images/prop_gas_pump_1b.png`);
             }
             fuelTypeWarnSent = false;
-            changeSelectedFuelType(currentPumpData.currentFuelType);
+            // mtz_gasstations: only the fuels this station sells. With the 4 usual fuels the buttons stay on the
+            // strips painted on the pump image; otherwise the bar is repainted with just the station's fuels.
+            const enabledFuels = currentPumpData.enabledFuels || ["regular", "plus", "premium", "diesel"];
+            const classicFuels = ["regular", "plus", "premium", "diesel"];
+            const isClassic = enabledFuels.length === 4 && classicFuels.every((fuel) => enabledFuels.includes(fuel));
+            ["regular", "plus", "premium", "diesel", "kerosene"].forEach((fuel) => {
+                $(`.fuel-type-button.${fuel}`).toggle(enabledFuels.includes(fuel));
+            });
+            $(".gas-pump-fuel-list-container")
+                .toggleClass("custom-fuels", !isClassic)
+                .css("grid-template-columns", isClassic ? "" : `repeat(${Math.max(1, enabledFuels.length)}, 1fr)`);
+            if (enabledFuels.length > 0) {
+                changeSelectedFuelType(enabledFuels.includes(currentPumpData.currentFuelType) ? currentPumpData.currentFuelType : enabledFuels[0]);
+            }
             $(".vehicle-fuel").text(Utils.translate("pumpInterface.vehicleFuel").format(`${Utils.numberFormat(currentPumpData.vehicleFuel, 1)} / ${Utils.numberFormat(currentPumpData.vehicleTankSize, 0)}`));
             $(".vehicle-fuel").attr("data-tooltip", Utils.translate("pumpInterface.vehicleFuelTooltip"));
             $(".bank-balance").text(Utils.currencyFormat(currentPumpData.bankBalance, 2));
@@ -95,6 +108,7 @@ window.addEventListener("message", async function(event) {
             $(".fuel-type-button.plus").text(Utils.translate("pumpInterface.fuelTypes.plus"));
             $(".fuel-type-button.premium").text(Utils.translate("pumpInterface.fuelTypes.premium"));
             $(".fuel-type-button.diesel").text(Utils.translate("pumpInterface.fuelTypes.diesel"));
+            $(".fuel-type-button.kerosene").text(Utils.translate("pumpInterface.fuelTypes.kerosene"));
             $(".confirm-button").text(Utils.translate("pumpInterface.confirm"));
 
             $("#confirm-refuel-payment-modal-title").text(Utils.translate("confirmRefuelModal.title"));
@@ -190,7 +204,7 @@ function updateRechargeDisplay(remainingFuelAmount, chargerType) {
 =================*/
 
 function changeSelectedFuelType(fuelType) {
-    if (fuelType == "regular" || fuelType == "plus" || fuelType == "premium" || fuelType == "diesel") {
+    if (fuelType == "regular" || fuelType == "plus" || fuelType == "premium" || fuelType == "diesel" || fuelType == "kerosene") {
         $(".fuel-type-button").removeClass("selected");
         $(`.fuel-type-button.${fuelType}`).addClass("selected");
 

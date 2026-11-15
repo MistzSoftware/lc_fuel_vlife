@@ -12,6 +12,7 @@ Lang["ja"] = {
             plus: "プラス",
             premium: "プレミアム",
             diesel: "ディーゼル",
+            kerosene: "ジェット燃料",
         },
     },
     pumpRefuelDisplay: {

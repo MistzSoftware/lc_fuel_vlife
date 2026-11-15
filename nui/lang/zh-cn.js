@@ -12,6 +12,7 @@ Lang["zh-cn"] = {
             plus: "95号燃油",
             premium: "98号燃油",
             diesel: "柴油",
+            kerosene: "航空煤油",
         },
     },
     pumpRefuelDisplay: {

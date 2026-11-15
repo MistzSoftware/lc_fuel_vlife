@@ -12,6 +12,7 @@ Lang["de"] = {
             plus: "Plus",
             premium: "Premium",
             diesel: "Diesel",
+            kerosene: "Kerosin",
         },
     },
     pumpRefuelDisplay: {

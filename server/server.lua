@@ -202,6 +202,7 @@ function serverOpenUI(source, isElectric, pumpModel, gasStationId, vehicleFuel, 
     local data = {
         pricePerLiter = stationData.pricePerLiter,
         stationStock = stationData.stationStock,
+        enabledFuels = stationData.enabledFuels, -- mtz_gasstations: fuel buttons shown on the pump screen
         currentFuelType = getVehicleFuelType(vehiclePlate),
         vehicleFuel = vehicleFuel or 0,
         vehicleTankSize = vehicleTankSize or 100,
@@ -241,6 +242,8 @@ function getStationData(gasStationId)
 
     for fuel, price in pairs(data.pricePerLiter) do stationData.pricePerLiter[fuel] = price end
     for fuel, stock in pairs(data.stationStock) do stationData.stationStock[fuel] = stock end
+    -- the pump screen only shows the fuels this station sells
+    if data.enabled then stationData.enabledFuels = data.enabled end
     return stationData
 end
 
@@ -399,6 +402,7 @@ function getStationDataFromConfig()
             plus = Config.DefaultValues.fuelPrice.plus,
             premium = Config.DefaultValues.fuelPrice.premium,
             diesel = Config.DefaultValues.fuelPrice.diesel,
+            kerosene = Config.DefaultValues.fuelPrice.kerosene or 2.10,
             electricfast = Config.Electric.chargeTypes.fast.price,
             electricnormal = Config.Electric.chargeTypes.normal.price,
         },
@@ -407,14 +411,23 @@ function getStationDataFromConfig()
             plus = Config.DefaultValues.fuelStock.plus and 1000 or 0,
             premium = Config.DefaultValues.fuelStock.premium and 1000 or 0,
             diesel = Config.DefaultValues.fuelStock.diesel and 1000 or 0,
+            kerosene = Config.DefaultValues.fuelStock.kerosene and 1000 or 0,
             electricfast = Config.Electric.chargeTypes.fast.stock and 1000 or 0,
             electricnormal = Config.Electric.chargeTypes.normal.stock and 1000 or 0,
-        }
+        },
+        -- mtz_gasstations: fuel buttons on the pump screen of a pump that isn't part of a station
+        enabledFuels = (function()
+            local list = {}
+            for _, fuel in ipairs({ "regular", "plus", "premium", "diesel", "kerosene" }) do
+                if Config.DefaultValues.fuelStock[fuel] then list[#list + 1] = fuel end
+            end
+            return list
+        end)(),
     }
 end
 
 function isFuelTypeValid(fuelType)
-    return Utils.Table.contains({"regular", "plus", "premium", "diesel", "electricfast", "electricnormal"}, fuelType)
+    return Utils.Table.contains({"regular", "plus", "premium", "diesel", "kerosene", "electricfast", "electricnormal"}, fuelType) -- kerosene: mtz_gasstations
 end
 
 function isFuelTypeElectric(fuelType)

@@ -347,6 +347,50 @@ body {
 }
 
 
+/* mtz_gasstations: bar repainted with only the station's fuels (covers the strips of the pump image) */
+.gas-pump-fuel-list-container.custom-fuels {
+    background: #15151b;
+    gap: 3px;
+}
+
+.custom-fuels .fuel-type-button {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.92);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.custom-fuels .fuel-type-button.regular { background: #d8d8d8; color: rgba(0, 0, 0, 0.8); }
+.custom-fuels .fuel-type-button.plus { background: #1f5fbf; }
+.custom-fuels .fuel-type-button.premium { background: #b3262b; }
+.custom-fuels .fuel-type-button.diesel { background: #1e7a2e; }
+.custom-fuels .fuel-type-button.kerosene { background: #3d8fd6; }
+.custom-fuels .fuel-type-button:hover { animation: none; filter: brightness(1.1); }
+.custom-fuels .fuel-type-button.selected { animation: none; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85); filter: brightness(1.15); }
+
+/* mtz_gasstations: kerosene (light blue) */
+@keyframes pulseKerosene {
+    0% {
+    background-color: rgba(124, 196, 255, 0.15);
+    box-shadow: rgba(124, 196, 255, 0.2) 0px 0px 8px 2px, rgba(124, 196, 255, 0.20) 0px 0px 4px 2px;
+    }
+    50% {
+    background-color: rgba(124, 196, 255, 0.35);
+    box-shadow: rgba(124, 196, 255, 0.5) 0px 0px 12px 4px, rgba(124, 196, 255, 0.30) 0px 0px 6px 3px;
+    }
+    100% {
+    background-color: rgba(124, 196, 255, 0.15);
+    box-shadow: rgba(124, 196, 255, 0.2) 0px 0px 8px 2px, rgba(124, 196, 255, 0.20) 0px 0px 4px 2px;
+    }
+}
+
+.fuel-type-button.kerosene.selected,
+.fuel-type-button.kerosene:hover {
+    background: rgba(124, 196, 255, 0.15);
+    cursor: pointer;
+    animation: pulseKerosene 3s infinite ease-in-out;
+}
+
 .fuel-type-button.regular {
     color: rgba(0, 0, 0, 0.75);
 }

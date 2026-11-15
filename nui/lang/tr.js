@@ -12,6 +12,7 @@ Lang["tr"] = {
             plus: "Plus",
             premium: "Premium",
             diesel: "Dizel",
+            kerosene: "Kerosen",
         },
     },
     pumpRefuelDisplay: {

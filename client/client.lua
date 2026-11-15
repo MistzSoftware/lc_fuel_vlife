@@ -406,6 +406,8 @@ function dealWithDefaultFuelType(vehicle, fuelType)
             fuelType = "diesel"
         elseif IsVehicleElectric(vehicle) then
             fuelType = "electric"
+        elseif GetVehicleClass(vehicle) == 15 or GetVehicleClass(vehicle) == 16 then
+            fuelType = "kerosene" -- mtz_gasstations: helicopters and planes run on kerosene by default
         else
             fuelType = "regular"
         end

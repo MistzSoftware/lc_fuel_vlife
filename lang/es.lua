@@ -46,5 +46,6 @@ Lang['es'] = {
         ['plus'] = "Plus",
         ['premium'] = "Premium",
         ['diesel'] = "Diésel",
+        ['kerosene'] = "Queroseno",
     },
 }
