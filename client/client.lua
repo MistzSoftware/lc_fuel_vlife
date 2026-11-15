@@ -81,6 +81,7 @@ function HandleFuelConsumption(vehicle, fuelType)
     local currentFuelLevel = GetVehicleFuelLevel(vehicle)
     if currentFuelLevel <= 0.0 then
         SetVehicleEngineOn(vehicle, false, true, false)
+        BringVehicleToHalt(vehicle, 1.0, 1, false)
         return
     end
 
@@ -574,7 +575,7 @@ local gameBuild = GetGameBuildNumber()
 function IsVehicleElectric(vehicle)
     if vehicle and vehicle ~= 0 then
         local vehicleHash = GetEntityModel(vehicle)
-        
+
         -- Native check for game builds 3258+
         if gameBuild >= 3258 and GetIsVehicleElectric(vehicleHash) == 1 then
             return true
