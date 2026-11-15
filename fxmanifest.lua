@@ -42,7 +42,7 @@ files {
 	"nui/fonts/Technology.woff",
 }
 
-dependency "lc_utils"
+dependencies { "lc_utils", "mtz_gasstations" }  -- mtz_gasstations: stations + gw-banking payment
 provides 'LegacyFuel'
 
 data_file 'DLC_ITYP_REQUEST' 'stream/prop_electric_01.ytyp'

@@ -45,6 +45,10 @@ local cooldown = {}
 local playerVehiclesFuelType = {}
 local fuelPurchased = {}
 
+-- mtz_gasstations: stations, stock, prices and gw-banking payment
+local GS = 'mtz_gasstations'
+local function gsRunning() return GetResourceState(GS) == 'started' end
+
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- Script functions
 -----------------------------------------------------------------------------------------------------------------------------------------
@@ -74,28 +78,30 @@ AddEventHandler("lc_fuel:confirmRefuel",function(data)
 
         local discount = getPlayerDiscountAmount(source)
         local finalPrice = initialPrice * (1 - (discount / 100))
-        if Utils.Framework.getPlayerAccountMoney(source, Config.Accounts[data.paymentMethod]) < finalPrice then
-            TriggerClientEvent("lc_fuel:Notify", source, "error", Utils.translate('not_enough_money'):format(Utils.numberFormat(finalPrice)))
-            return
-        end
 
-        if not removeStockFromStation(gasStationId, finalPrice, data.fuelAmount, data.selectedFuelType, false) then
+        if (stationData.stationStock[data.selectedFuelType] or 0) < data.fuelAmount then
             TriggerClientEvent("lc_fuel:Notify", source, "error", Utils.translate('not_enough_stock'))
             return
         end
 
-        Utils.Framework.tryRemoveAccountMoney(source, finalPrice, Config.Accounts[data.paymentMethod])
+        -- mtz_gasstations: lc_fuel's screen closes so gw-banking's terminal can take the focus
+        TriggerClientEvent("lc_fuel:closeUI", source)
+        local methods = data.paymentMethod == "account1" and "cash" or "card"
 
-        fuelPurchased[source] = {
-            finalPrice = finalPrice,
-            account = Config.Accounts[data.paymentMethod],
-            selectedFuelType = data.selectedFuelType,
-            fuelAmount = data.fuelAmount,
-            pricePerLiter = pricePerLiter,
-        }
+        exports[GS]:chargeFuel(source, gasStationId, data.selectedFuelType, data.fuelAmount, finalPrice, methods, function(paid, receipt)
+            if not paid then return end -- mtz_gasstations already told the player why
 
-        TriggerClientEvent("lc_fuel:getPumpNozzle", source, data.fuelAmount, data.selectedFuelType)
-        TriggerClientEvent("lc_fuel:Notify", source, "success", Utils.translate('refuel_paid'):format(Utils.numberFormat(finalPrice)))
+            fuelPurchased[source] = {
+                finalPrice = receipt.amount,
+                receipt = receipt,
+                selectedFuelType = data.selectedFuelType,
+                fuelAmount = data.fuelAmount,
+                pricePerLiter = pricePerLiter,
+            }
+
+            TriggerClientEvent("lc_fuel:getPumpNozzle", source, data.fuelAmount, data.selectedFuelType)
+            TriggerClientEvent("lc_fuel:Notify", source, "success", Utils.translate('refuel_paid'):format(Utils.numberFormat(receipt.amount)))
+        end)
     end)
 end)
 
@@ -136,7 +142,7 @@ AddEventHandler("lc_fuel:returnNozzle",function(remainingFuel, isElectric)
         else
             TriggerClientEvent("lc_fuel:Notify", source, "success", Utils.translate('returned_fuel'):format(Utils.Math.round(remainingFuel, 1), returnedAmount))
         end
-        Utils.Framework.giveAccountMoney(source, returnedAmount, fuelPurchased[source].account)
+        exports[GS]:refundFuel(source, fuelPurchased[source].receipt, returnedAmount) -- mtz_gasstations
 
         fuelPurchased[source] = nil
     end)
@@ -171,26 +177,21 @@ AddEventHandler("lc_fuel:confirmJerryCanPurchase",function(data)
             return
         end
 
-        if Utils.Framework.getPlayerAccountMoney(source, Config.Accounts[data.paymentMethod]) < Config.JerryCan.price then
-            TriggerClientEvent("lc_fuel:Notify", source, "error", Utils.translate('not_enough_money'):format(Config.JerryCan.price))
-            return
-        end
+        -- mtz_gasstations: payment through gw-banking's terminal
+        TriggerClientEvent("lc_fuel:closeUI", source)
+        local methods = data.paymentMethod == "account1" and "cash" or "card"
 
-        if not removeStockFromStation(gasStationId, Config.JerryCan.price, Config.JerryCan.requiredStock, fuelType, true) then
-            TriggerClientEvent("lc_fuel:Notify", source, "error", Utils.translate('not_enough_stock'))
-            return
-        end
-        Utils.Framework.tryRemoveAccountMoney(source, Config.JerryCan.price, Config.Accounts[data.paymentMethod])
+        exports[GS]:chargeFuel(source, gasStationId, fuelType, Config.JerryCan.requiredStock, Config.JerryCan.price, methods, function(paid)
+            if not paid then return end
 
-        -- Gives the jerry can to the player
-        if Config.JerryCan.giveAsWeapon then
-            Utils.Framework.givePlayerWeapon(source, Config.JerryCan.item, 1, Config.JerryCan.metadata)
-        else
-            Utils.Framework.givePlayerItem(source, Config.JerryCan.item, 1, Config.JerryCan.metadata)
-        end
-
-        TriggerClientEvent("lc_fuel:Notify", source, "success", Utils.translate('jerry_can_paid'):format(Config.JerryCan.price))
-        TriggerClientEvent("lc_fuel:closeUI", source, data.fuelAmount, data.selectedFuelType)
+            -- Gives the jerry can to the player
+            if Config.JerryCan.giveAsWeapon then
+                Utils.Framework.givePlayerWeapon(source, Config.JerryCan.item, 1, Config.JerryCan.metadata)
+            else
+                Utils.Framework.givePlayerItem(source, Config.JerryCan.item, 1, Config.JerryCan.metadata)
+            end
+            TriggerClientEvent("lc_fuel:Notify", source, "success", Utils.translate('jerry_can_paid'):format(Config.JerryCan.price))
+        end)
     end)
 end)
 
@@ -224,52 +225,22 @@ end
 -- Gas Station stock functions
 -----------------------------------------------------------------------------------------------------------------------------------------
 
+-- mtz_gasstations: the station this player's pump belongs to
 function getCurrentGasStationId(source)
-    if not Config.PlayerOwnedGasStations.enabled then return nil end
-    local playerCoords = GetEntityCoords(GetPlayerPed(source))
-    for k,v in pairs(Config.PlayerOwnedGasStations.gasStations) do
-        if #(v.vector - playerCoords) <= v.radius then
-            return k
-        end
-    end
-    return nil
+    if not gsRunning() then return nil end
+    return exports[GS]:getStationAt(GetEntityCoords(GetPlayerPed(source)))
 end
 
+-- mtz_gasstations: prices and stock of the station (electric charging keeps the config values)
 function getStationData(gasStationId)
     local stationData = getStationDataFromConfig()
-    if not gasStationId then
-        return stationData
-    end
+    if not gasStationId or not gsRunning() then return stationData end
 
-    local sql = "SELECT price, stock, price_plus, stock_plus, price_premium, stock_premium, price_diesel, stock_diesel, price_electricfast, stock_electricfast, price_electricnormal, stock_electricnormal FROM gas_station_business WHERE gas_station_id = @gas_station_id";
-    local query = Utils.Database.fetchAll(sql, {['@gas_station_id'] = gasStationId})[1];
+    local data = exports[GS]:getStationData(gasStationId)
+    if not data then return stationData end
 
-    if not query then
-        return stationData
-    end
-
-    local sql = "UPDATE `gas_station_business` SET total_visits = total_visits + 1 WHERE gas_station_id = @gas_station_id";
-    Utils.Database.execute(sql, {['@gas_station_id'] = gasStationId});
-
-    stationData = {
-        pricePerLiter = {
-            regular = query.price/100,
-            plus = query.price_plus/100,
-            premium = query.price_premium/100,
-            diesel = query.price_diesel/100,
-            electricfast = query.price_electricfast/100,
-            electricnormal = query.price_electricnormal/100,
-        },
-        stationStock = {
-            regular = query.stock,
-            plus = query.stock_plus,
-            premium = query.stock_premium,
-            diesel = query.stock_diesel,
-            electricfast = query.stock_electricfast == 1 and 100 or 0,
-            electricnormal = query.stock_electricnormal == 1 and 100 or 0,
-        }
-    }
-
+    for fuel, price in pairs(data.pricePerLiter) do stationData.pricePerLiter[fuel] = price end
+    for fuel, stock in pairs(data.stationStock) do stationData.stationStock[fuel] = stock end
     return stationData
 end
 
@@ -349,6 +320,14 @@ function returnStockToGasStation(gasStationId, priceRefunded, fuelAmount, fuelTy
     if not isFuelTypeValid(fuelType) then
         print("Invalid fuel type: "..(fuelType or "nil"))
         return false, 0
+    end
+
+    -- mtz_gasstations: litres back in the station's stock, money taken back from it
+    if gasStationId and gsRunning() then
+        if isFuelTypeElectric(fuelType) then return true, priceRefunded end
+        local ok, refunded = exports[GS]:refund(gasStationId, fuelType, fuelAmount, priceRefunded)
+        if ok ~= nil then return ok, refunded end
+        gasStationId = nil
     end
 
     -- If not owned
